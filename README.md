@@ -1,5 +1,6 @@
 Frontend url: https://crypto-crash-backend.vercel.app/
-Backend url:  
+
+Backend url:  https://crypto-crash-backend-m4w8.onrender.com/
  # 🎮 Crypto Crash Game (Backend)
 
 A real-time multiplayer "Crypto Crash" game built with Node.js, WebSockets, and live cryptocurrency conversion via CoinGecko API.
