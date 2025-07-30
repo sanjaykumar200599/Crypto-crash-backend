@@ -1,5 +1,5 @@
 // ✅ Replace with your actual Render backend URL
-const BACKEND_URL = "https://crypto-crash-backend-m4w8.onrender.com/";
+const BACKEND_URL = "https://crypto-crash-backend-m4w8.onrender.com";
 
 // Socket.io connection to backend (for WebSocket)
 const socket = io(BACKEND_URL);
