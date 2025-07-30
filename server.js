@@ -10,7 +10,13 @@ const app = express();
 const server = http.createServer(app); // Required for WebSocket to work
 
 // Middleware
-app.use(cors());
+//  CORS: Allow all origins (including Vercel)
+app.use(cors({
+  origin: "*", // You can restrict this to your Vercel domain for better security
+  methods: ["GET", "POST"],
+  credentials: false
+}));
+
 app.use(express.json());
 
 // MongoDB Connection
