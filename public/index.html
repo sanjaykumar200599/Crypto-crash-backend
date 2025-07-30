@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Crypto Crash Game</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>💥 Crypto Crash</h1>
+
+    <div class="status">
+      <p>Current Multiplier: <span id="multiplier">1.00x</span></p>
+      <p>Crash Point: <span id="crash-point">--</span></p>
+    </div>
+
+    <div class="bet-section">
+      <input type="number" id="usd-amount" placeholder="USD amount" />
+      <select id="currency">
+        <option value="BTC">BTC</option>
+        <option value="ETH">ETH</option>
+      </select>
+      <button id="bet-btn">Place Bet</button>
+      <button id="cashout-btn" disabled>💸 Cash Out</button>
+    </div>
+
+    <div class="wallet">
+      <p>Wallet Balance (Crypto): <span id="wallet-balance">Loading...</span></p>
+      <p>Wallet Balance (USD): <span id="wallet-usd">Loading...</span></p>
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

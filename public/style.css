@@ -1,0 +1,55 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #121212;
+  color: #f4f4f4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.container {
+  width: 400px;
+  background: #1e1e1e;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px #00ff99;
+}
+
+h1 {
+  text-align: center;
+  color: #00ff99;
+}
+
+.status, .wallet, .bet-section, .log {
+  margin-top: 20px;
+}
+
+input, select {
+  padding: 8px;
+  margin-right: 10px;
+  width: 130px;
+}
+
+button {
+  padding: 10px 15px;
+  background-color: #00ff99;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:disabled {
+  background-color: gray;
+}
+
+.log {
+  margin-top: 20px;
+  font-size: 14px;
+  background: #2a2a2a;
+  padding: 10px;
+  border-radius: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+}

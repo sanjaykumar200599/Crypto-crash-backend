@@ -1,0 +1,122 @@
+{
+  "info": {
+    "name": "Crypto Crash - Player API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "crypto-crash-player-api-20250730163341"
+  },
+  "item": [
+    {
+      "name": "Create Player",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"sanjay\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/players",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "players"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get All Players",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3000/api/players",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "players"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Player by ID",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3000/api/players/:id",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "players",
+            ":id"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Update Player",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"updated_username\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/players/:id",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "players",
+            ":id"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Delete Player",
+      "request": {
+        "method": "DELETE",
+        "url": {
+          "raw": "http://localhost:3000/api/players/:id",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "players",
+            ":id"
+          ]
+        }
+      }
+    }
+  ]
+}
