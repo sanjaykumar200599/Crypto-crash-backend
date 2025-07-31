@@ -1,4 +1,3 @@
-//CryptoPriceService.js
 const axios = require("axios");
 
 let cache = {};
@@ -8,6 +7,7 @@ const CACHE_DURATION = 10000; // 10 seconds
 async function fetchCryptoPrice(crypto = "bitcoin") {
   const now = Date.now();
 
+  // Return cached price if not expired
   if (cache[crypto] && now - lastFetch < CACHE_DURATION) {
     return cache[crypto];
   }
@@ -16,7 +16,12 @@ async function fetchCryptoPrice(crypto = "bitcoin") {
     const COINGECKO_API_URL = process.env.COINGECKO_API_URL || 'https://api.coingecko.com/api/v3';
     const url = `${COINGECKO_API_URL}/simple/price?ids=${crypto}&vs_currencies=usd`;
 
-    const response = await axios.get(url);
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'CryptoCrashGame/1.0 (+sanjayofficial0918@gmail.com)', 
+      },
+    });
+
     const price = response.data[crypto]?.usd;
 
     if (price) {
@@ -28,7 +33,6 @@ async function fetchCryptoPrice(crypto = "bitcoin") {
     }
   } catch (error) {
     console.error("❌ Failed to fetch crypto price:", error.message);
-    // Return cached value if available
     return cache[crypto] || null;
   }
 }
