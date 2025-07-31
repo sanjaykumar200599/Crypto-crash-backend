@@ -26,7 +26,7 @@ class GameEngine {
     const hasBets = Object.keys(this.bets).length > 0;
 
     if (!hasBets) {
-      console.log("⏸️ Skipping round — no active bets.");
+      //console.log("⏸️ Skipping round — no active bets.");
       return;
     }
 
