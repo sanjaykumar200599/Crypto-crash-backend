@@ -1,4 +1,4 @@
-//ProvablyFair Service
+// ProvablyFairService.js
 const crypto = require("crypto");
 
 // Generate a random hex seed
@@ -14,19 +14,21 @@ function generateHash(seed) {
 // Generate crash point based on hash, capped by maxMultiplier
 function generateCrashPoint(seed, maxMultiplier = 100) {
   const hash = generateHash(seed);
-  const h = parseInt(hash.slice(0, 13), 16); // first 52 bits
+  const h = parseInt(hash.slice(0, 13), 16); // First 52 bits
 
-  // Simple provably fair formula
   const ratio = h / Math.pow(2, 52);
   const crash = 1.0 / (1 - ratio);
 
-  if (crash < 1 || crash > maxMultiplier) {
-    return Math.min(maxMultiplier, Math.max(1.01, crash));
+  if (!isFinite(crash) || crash < 1.01) {
+    return 1.01;
+  }
+
+  if (crash > maxMultiplier) {
+    return maxMultiplier;
   }
 
   return parseFloat(crash.toFixed(2));
 }
-
 
 // Generate seed + hash for provable fairness
 function generateSeedAndHash() {

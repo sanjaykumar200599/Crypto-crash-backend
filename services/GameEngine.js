@@ -13,6 +13,7 @@ class GameEngine {
     this.multiplier = 1;
     this.running = false;
     this.currentRound = null;
+    this.multiplierInterval = null;
   }
 
   async start() {
@@ -52,7 +53,7 @@ class GameEngine {
 
     const startTime = Date.now();
 
-    const interval = setInterval(async () => {
+    this.multiplierInterval= setInterval(async () => {
       const elapsed = (Date.now() - startTime) / 1000;
       this.multiplier = 1 + elapsed * GROWTH_FACTOR;
 
@@ -61,7 +62,9 @@ class GameEngine {
       });
 
       if (this.multiplier >= this.crashPoint) {
-        clearInterval(interval);
+        clearInterval(this.multiplierInterval);
+        this.multiplierInterval = null;
+
 
         this.io.emit("round_end", {
           crashPoint: this.crashPoint.toFixed(2),
@@ -153,79 +156,95 @@ class GameEngine {
   }
 
   async cashOut(socket, { playerId }) {
-    try {
-      const bet = this.bets[playerId];
-      if (!bet) {
-        socket.emit("error", { message: "No active bet found." });
-        return;
-      }
-
-      if (bet.cashoutMultiplier !== null) {
-        socket.emit("error", { message: "Already cashed out." });
-        return;
-      }
-
-      if (this.multiplier >= this.crashPoint) {
-        socket.emit("error", { message: "Game already crashed." });
-        return;
-      }
-
-      const player = await Player.findById(playerId);
-      if (!player) {
-        socket.emit("error", { message: "Player not found." });
-        return;
-      }
-
-      const cashoutMultiplier = this.multiplier;
-      const payoutCrypto = bet.cryptoAmount * cashoutMultiplier;
-      const payoutUSD = payoutCrypto * bet.entryPrice;
-
-      player.wallet[bet.currency] += payoutCrypto;
-      await player.save();
-
-      bet.cashoutMultiplier = cashoutMultiplier;
-
-      const betInRound = this.currentRound.player_bets.find(
-        (b) => b.player_id.toString() === playerId.toString()
-      );
-      if (betInRound) {
-        betInRound.cashed_out = true;
-        betInRound.multiplier = cashoutMultiplier;
-        await this.currentRound.save();
-      }
-
-      const transactionHash = `cashout_${Date.now()}_${playerId}`;
-      const tx = new Transaction({
-        player_id: player._id,
-        usd_amount: payoutUSD,
-        crypto_amount: payoutCrypto,
-        currency: bet.currency,
-        transaction_type: "cashout",
-        transaction_hash: transactionHash,
-        price_at_time: bet.entryPrice,
-      });
-      await tx.save();
-
-      socket.emit("cashed_out", {
-        payoutUSD: payoutUSD.toFixed(2),
-        payoutCrypto: payoutCrypto.toFixed(8),
-        cashoutMultiplier: cashoutMultiplier.toFixed(2),
-        transactionHash,
-      });
-
-      this.io.emit("player_cashed_out", {
-        playerId,
-        payoutUSD: payoutUSD.toFixed(2),
-        payoutCrypto: payoutCrypto.toFixed(8),
-        cashoutMultiplier: cashoutMultiplier.toFixed(2),
-      });
-
-      console.log(`💰 ${player.username || player._id} cashed out at ${cashoutMultiplier.toFixed(2)}x`);
-    } catch (err) {
-      console.error("Cashout Error:", err);
-      socket.emit("error", { message: "Could not process cashout." });
+  try {
+    const bet = this.bets[playerId];
+    if (!bet) {
+      socket.emit("error", { message: "No active bet found." });
+      return;
     }
+
+    if (bet.cashoutMultiplier !== null) {
+      socket.emit("error", { message: "Already cashed out." });
+      return;
+    }
+
+    if (this.multiplier >= this.crashPoint) {
+      socket.emit("error", { message: "Game already crashed." });
+      return;
+    }
+
+    const player = await Player.findById(playerId);
+    if (!player) {
+      socket.emit("error", { message: "Player not found." });
+      return;
+    }
+
+    const cashoutMultiplier = this.multiplier;
+    const payoutCrypto = bet.cryptoAmount * cashoutMultiplier;
+    const payoutUSD = payoutCrypto * bet.entryPrice;
+
+    player.wallet[bet.currency] += payoutCrypto;
+    await player.save();
+
+    bet.cashoutMultiplier = cashoutMultiplier;
+
+    const betInRound = this.currentRound.player_bets.find(
+      (b) => b.player_id.toString() === playerId.toString()
+    );
+    if (betInRound) {
+      betInRound.cashed_out = true;
+      betInRound.multiplier = cashoutMultiplier;
+      await this.currentRound.save();
+    }
+
+    const transactionHash = `cashout_${Date.now()}_${playerId}`;
+    const tx = new Transaction({
+      player_id: player._id,
+      usd_amount: payoutUSD,
+      crypto_amount: payoutCrypto,
+      currency: bet.currency,
+      transaction_type: "cashout",
+      transaction_hash: transactionHash,
+      price_at_time: bet.entryPrice,
+    });
+    await tx.save();
+
+    socket.emit("cashed_out", {
+      payoutUSD: payoutUSD.toFixed(2),
+      payoutCrypto: payoutCrypto.toFixed(8),
+      cashoutMultiplier: cashoutMultiplier.toFixed(2),
+      transactionHash,
+    });
+
+    this.io.emit("player_cashed_out", {
+      playerId,
+      payoutUSD: payoutUSD.toFixed(2),
+      payoutCrypto: payoutCrypto.toFixed(8),
+      cashoutMultiplier: cashoutMultiplier.toFixed(2),
+    });
+
+    console.log(`💰 ${player.username || player._id} cashed out at ${cashoutMultiplier.toFixed(2)}x`);
+
+    // 💥 End round immediately on first successful cashout
+    if (this.multiplierInterval) {
+      clearInterval(this.multiplierInterval);
+      this.multiplierInterval = null;
+
+      this.io.emit("round_end", {
+        crashPoint: cashoutMultiplier.toFixed(2),
+        endedEarly: true,
+      });
+
+      await this.resolveBets();
+      this.bets = {};
+      this.running = false;
+    }
+  } catch (err) {
+    console.error("Cashout Error:", err);
+    socket.emit("error", { message: "Could not process cashout." });
   }
+}
+
 
   async resolveBets() {
     try {

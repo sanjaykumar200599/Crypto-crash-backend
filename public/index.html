@@ -87,15 +87,17 @@
     });
 
     socket.on("bet_placed", (data) => {
-      log(`🎯 Bet confirmed: ${data.usdAmount} USD (${data.cryptoAmount.toFixed(8)} ${data.currency})`);
+      const { usdAmount, cryptoAmount, currency } = data;
+      log(`🎯 Bet confirmed: $${usdAmount} (${cryptoAmount?.toFixed(8)} ${currency})`);
     });
 
     socket.on("cashed_out", (data) => {
-      log(`✅ You cashed out at ${data.cashoutMultiplier}x and won ${data.payoutUSD} USD`);
+      const { cashoutMultiplier, payoutUSD } = data;
+      log(`✅ You cashed out at ${cashoutMultiplier}x and won $${payoutUSD}`);
     });
 
     socket.on("error", (err) => {
-      log(`❌ Error:  ${err.message} due to invalid Id`);
+      log(`❌ Error: ${err.message}`);
     });
 
     function placeBet() {
@@ -113,7 +115,8 @@
         currency: "BTC"
       });
 
-      log(`📤 Sent bet: ${usd} USD`);
+      log(`📤 Sent bet: $${usd}`);
+      document.getElementById("betAmount").value = ""; // clear input
     }
 
     function cashout() {
