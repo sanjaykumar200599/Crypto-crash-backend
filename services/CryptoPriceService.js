@@ -1,18 +1,35 @@
 //CryptoPriceService.js
 const axios = require("axios");
 
+let cache = {};
+let lastFetch = 0;
+const CACHE_DURATION = 10000; // 10 seconds
+
 async function fetchCryptoPrice(crypto = "bitcoin") {
+  const now = Date.now();
+
+  if (cache[crypto] && now - lastFetch < CACHE_DURATION) {
+    return cache[crypto];
+  }
+
   try {
     const COINGECKO_API_URL = process.env.COINGECKO_API_URL || 'https://api.coingecko.com/api/v3';
-
-    // Build URL using the base API URL and crypto id
     const url = `${COINGECKO_API_URL}/simple/price?ids=${crypto}&vs_currencies=usd`;
 
     const response = await axios.get(url);
-    return response.data[crypto].usd;
+    const price = response.data[crypto]?.usd;
+
+    if (price) {
+      cache[crypto] = price;
+      lastFetch = now;
+      return price;
+    } else {
+      throw new Error("Price not found in API response.");
+    }
   } catch (error) {
-    console.error("Failed to fetch crypto price:", error.message);
-    return null;
+    console.error("❌ Failed to fetch crypto price:", error.message);
+    // Return cached value if available
+    return cache[crypto] || null;
   }
 }
 

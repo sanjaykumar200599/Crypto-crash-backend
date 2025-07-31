@@ -1,4 +1,3 @@
-//GameEngine.js
 const GameRound = require("../models/GameRound");
 const Player = require("../models/Player");
 const Transaction = require("../models/Transaction");
@@ -9,7 +8,7 @@ const { ROUND_INTERVAL_MS, GROWTH_FACTOR, MAX_CRASH_MULTIPLIER } = require("../c
 class GameEngine {
   constructor(io) {
     this.io = io;
-    this.bets = {}; // { playerId: { usdAmount, cryptoAmount, currency, entryPrice, cashoutMultiplier } }
+    this.bets = {}; // Active bets per player
     this.crashPoint = 0;
     this.multiplier = 1;
     this.running = false;
@@ -28,13 +27,11 @@ class GameEngine {
     this.bets = {};
     this.multiplier = 1;
 
-    // Generate provably fair seed and crash point
     const { seed, hash } = generateSeedAndHash();
     this.crashPoint = generateCrashPoint(seed, MAX_CRASH_MULTIPLIER);
 
-    // Create new game round with required fields
     this.currentRound = new GameRound({
-      round_id: Date.now().toString(), // Using timestamp as simple round id
+      round_id: Date.now().toString(),
       seed,
       hash,
       crash_point: this.crashPoint,
@@ -45,9 +42,9 @@ class GameEngine {
 
     this.io.emit("round_start", {
       roundId: this.currentRound.round_id,
-      crashPoint: this.crashPoint.toFixed(2),
-      hash
+      crashHash: hash
     });
+    console.log(`🚀 Round Started | Crash at: ${this.crashPoint.toFixed(2)}x`);
 
     const startTime = Date.now();
 
@@ -55,15 +52,19 @@ class GameEngine {
       const elapsed = (Date.now() - startTime) / 1000;
       this.multiplier = 1 + elapsed * GROWTH_FACTOR;
 
-      this.io.emit("multiplier_update", { multiplier: this.multiplier.toFixed(2) });
+      this.io.emit("multiplier_update", {
+        multiplier: this.multiplier.toFixed(2)
+      });
 
       if (this.multiplier >= this.crashPoint) {
         clearInterval(interval);
 
-        this.io.emit("round_end", { crashPoint: this.crashPoint.toFixed(2) });
+        this.io.emit("round_end", {
+          crashPoint: this.crashPoint.toFixed(2)
+        });
+        console.log(`💥 Round Ended | Crash at: ${this.crashPoint.toFixed(2)}x`);
 
         await this.resolveBets();
-
         this.running = false;
       }
     }, 100);
@@ -95,17 +96,14 @@ class GameEngine {
 
       const cryptoAmount = usdAmount / cryptoPrice;
 
-      // Check player crypto wallet balance
       if (!player.wallet[currency] || player.wallet[currency] < cryptoAmount) {
         socket.emit("error", { message: `Insufficient ${currency} balance.` });
         return;
       }
 
-      // Deduct crypto from wallet
       player.wallet[currency] -= cryptoAmount;
       await player.save();
 
-      // Store bet info
       this.bets[playerId] = {
         usdAmount,
         cryptoAmount,
@@ -114,7 +112,6 @@ class GameEngine {
         cashoutMultiplier: null,
       };
 
-      // Add bet info to current round's player_bets array
       this.currentRound.player_bets.push({
         player_id: player._id,
         usd_amount: usdAmount,
@@ -125,7 +122,6 @@ class GameEngine {
       });
       await this.currentRound.save();
 
-      // Log bet transaction
       const transactionHash = `bet_${Date.now()}_${playerId}`;
       const betTransaction = new Transaction({
         player_id: player._id,
@@ -144,6 +140,8 @@ class GameEngine {
         currency,
         transactionHash,
       });
+
+      console.log(`🟢 ${player.username || player._id} placed $${usdAmount} in ${currency}`);
     } catch (err) {
       console.error("Bet Error:", err);
       socket.emit("error", { message: "Could not place bet." });
@@ -168,19 +166,21 @@ class GameEngine {
         return;
       }
 
+      const player = await Player.findById(playerId);
+      if (!player) {
+        socket.emit("error", { message: "Player not found." });
+        return;
+      }
+
       const cashoutMultiplier = this.multiplier;
       const payoutCrypto = bet.cryptoAmount * cashoutMultiplier;
       const payoutUSD = payoutCrypto * bet.entryPrice;
 
-      // Add crypto to player's wallet
-      const player = await Player.findById(playerId);
       player.wallet[bet.currency] += payoutCrypto;
       await player.save();
 
-      // Update bet cashout info
       bet.cashoutMultiplier = cashoutMultiplier;
 
-      // Update current round player_bets cashed_out flag and multiplier
       const betInRound = this.currentRound.player_bets.find(
         (b) => b.player_id.toString() === playerId.toString()
       );
@@ -190,7 +190,6 @@ class GameEngine {
         await this.currentRound.save();
       }
 
-      // Log cashout transaction
       const transactionHash = `cashout_${Date.now()}_${playerId}`;
       const cashoutTransaction = new Transaction({
         player_id: player._id,
@@ -210,13 +209,14 @@ class GameEngine {
         transactionHash,
       });
 
-      // Broadcast cashout event to all players
       this.io.emit("player_cashed_out", {
         playerId,
         payoutUSD: payoutUSD.toFixed(2),
         payoutCrypto: payoutCrypto.toFixed(8),
         cashoutMultiplier: cashoutMultiplier.toFixed(2),
       });
+
+      console.log(`💰 ${player.username || player._id} cashed out at ${cashoutMultiplier.toFixed(2)}x`);
     } catch (err) {
       console.error("Cashout Error:", err);
       socket.emit("error", { message: "Could not process cashout." });
@@ -225,9 +225,6 @@ class GameEngine {
 
   async resolveBets() {
     try {
-      // For players who didn't cash out, no payout (they lose)
-      // Save transactions for all bets to DB
-
       const promises = [];
 
       for (const [playerId, bet] of Object.entries(this.bets)) {
@@ -237,7 +234,6 @@ class GameEngine {
         const won = bet.cashoutMultiplier !== null;
         const payoutCrypto = won ? bet.cryptoAmount * bet.cashoutMultiplier : 0;
 
-        // Find matching bet record in currentRound to update multiplier and cashed_out flag if missed
         const betRecord = this.currentRound.player_bets.find(
           (b) => b.player_id.toString() === playerId.toString()
         );
@@ -246,7 +242,6 @@ class GameEngine {
           betRecord.cashed_out = won;
         }
 
-        // Create transaction record for losing bets (no payout)
         if (!won) {
           const transactionHash = `loss_${Date.now()}_${playerId}`;
           const lossTransaction = new Transaction({

@@ -1,45 +1,72 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Crypto Crash Game</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="icon" href="favicon.ico" />
-
+  <title>Crypto Crash WebSocket Test</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #111; color: #eee; }
+    .log { white-space: pre-wrap; background: #222; padding: 10px; height: 300px; overflow-y: scroll; }
+    input, button { margin-top: 10px; }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>💥 Crypto Crash</h1>
-
-    <div class="status">
-      <p>Current Multiplier: <span id="multiplier">1.00x</span></p>
-      <p>Crash Point: <span id="crash-point">--</span></p>
-    </div>
-
-    <div class="bet-section">
-      <input type="number" id="usd-amount" placeholder="USD amount" />
-      <select id="currency">
-        <option value="BTC">BTC</option>
-        <option value="ETH">ETH</option>
-      </select>
-      <button id="bet-btn">Place Bet</button>
-      <button id="cashout-btn" disabled>💸 Cash Out</button>
-    </div>
-
-    <div class="wallet">
-      <p>Wallet Balance (Crypto): <span id="wallet-balance">Loading...</span></p>
-      <p>Wallet Balance (USD): <span id="wallet-usd">Loading...</span></p>
-    </div>
-
-    <div class="log" id="log"></div>
+  <h2>Crypto Crash WebSocket Client</h2>
+  <div>
+    <label>Player ID: </label>
+    <input type="text" id="playerId" placeholder="Enter player ID" />
+    <br>
+    <label>Bet Amount (USD): </label>
+    <input type="number" id="betAmount" />
+    <button onclick="placeBet()">Place Bet</button>
+    <button onclick="cashout()">Cash Out</button>
   </div>
 
-  <!--  Load socket.io client from backend -->
-  <script src="https://crypto-crash-backend-m4w8.onrender.com//socket.io/socket.io.js"></script>
+  <h3>Game Log:</h3>
+  <div class="log" id="log"></div>
 
-  <!--  local JS -->
-  <script src="script.js"></script>
-  
+   <!-- Load socket.io client from CDN -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    const log = msg => {
+      const el = document.getElementById('log');
+      el.innerText += `\n${msg}`;
+      el.scrollTop = el.scrollHeight;
+    };
+
+    const socket = io("https://crypto-crash-backend-m4w8.onrender.com/"); 
+
+    socket.on("connect", () => {
+      log("✅ Connected to WebSocket");
+    });
+
+    socket.on("game:start", data => {
+      log(`🚀 Game started! Round ID: ${data.roundId}`);
+    });
+
+    socket.on("game:multiplier", data => {
+      log(`📈 Multiplier: ${data.multiplier}x`);
+    });
+
+    socket.on("game:cashout", data => {
+      log(`💸 Player ${data.playerId} cashed out at ${data.multiplier}x, won ${data.usdAmount} USD`);
+    });
+
+    socket.on("game:end", data => {
+      log(`💥 Game crashed at ${data.crashPoint}x`);
+    });
+
+    function placeBet() {
+      const playerId = document.getElementById("playerId").value;
+      const usd = parseFloat(document.getElementById("betAmount").value);
+      socket.emit("bet:place", { playerId, usd, currency: "BTC" });
+      log(`📝 Bet placed: ${usd} USD`);
+    }
+
+    function cashout() {
+      const playerId = document.getElementById("playerId").value;
+      socket.emit("cashout:request", { playerId });
+      log("⚠️ Cashout requested");
+    }
+  </script>
+
 </body>
 </html>
