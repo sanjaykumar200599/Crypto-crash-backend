@@ -14,14 +14,19 @@ function generateHash(seed) {
 // Generate crash point based on hash, capped by maxMultiplier
 function generateCrashPoint(seed, maxMultiplier = 100) {
   const hash = generateHash(seed);
-  const h = parseInt(hash.slice(0, 13), 16); // First 52 bits
-  const result = 1 + (h / Math.pow(2, 52)); // Random number > 1
+  const h = parseInt(hash.slice(0, 13), 16); // first 52 bits
 
-  if (result >= 1) return 1.0; // Rare: force instant crash
+  // Simple provably fair formula
+  const ratio = h / Math.pow(2, 52);
+  const crash = 1.0 / (1 - ratio);
 
-  const crashPoint = Math.floor((maxMultiplier / (1 - result))) / 100;
-  return Math.min(crashPoint, maxMultiplier);
+  if (crash < 1 || crash > maxMultiplier) {
+    return Math.min(maxMultiplier, Math.max(1.01, crash));
+  }
+
+  return parseFloat(crash.toFixed(2));
 }
+
 
 // Generate seed + hash for provable fairness
 function generateSeedAndHash() {

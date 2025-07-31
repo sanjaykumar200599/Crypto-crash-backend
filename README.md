@@ -24,6 +24,7 @@ crypto-crash-backend/
 ├── .env.example
 ├── config/
 ├── models/
+|__ public/
 ├── services/
 ├── routes/
 ├── middleware/
