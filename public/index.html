@@ -95,7 +95,7 @@
     });
 
     socket.on("error", (err) => {
-      log(`❌ Error: ${err.message}`);
+      log(`❌ Error:  ${err.message} due to invalid Id`);
     });
 
     function placeBet() {

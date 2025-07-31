@@ -1,4 +1,3 @@
-//GameEngine.js 
 const GameRound = require("../models/GameRound");
 const Player = require("../models/Player");
 const Transaction = require("../models/Transaction");
@@ -24,18 +23,12 @@ class GameEngine {
     if (this.running) return;
 
     const hasBets = Object.keys(this.bets).length > 0;
-
-    if (!hasBets) {
-      //console.log("⏸️ Skipping round — no active bets.");
-      return;
-    }
+    if (!hasBets) return;
 
     await this.runGameLoop();
   }
 
   async runGameLoop() {
-    if (this.running) return;
-
     this.running = true;
     this.multiplier = 1;
 
@@ -47,14 +40,13 @@ class GameEngine {
       seed,
       hash,
       crash_point: this.crashPoint,
-      player_bets: []
+      player_bets: [],
     });
-
     await this.currentRound.save();
 
     this.io.emit("round_start", {
       roundId: this.currentRound.round_id,
-      crashHash: hash
+      crashHash: hash,
     });
     console.log(`🚀 Round Started | Crash at: ${this.crashPoint.toFixed(2)}x`);
 
@@ -65,20 +57,20 @@ class GameEngine {
       this.multiplier = 1 + elapsed * GROWTH_FACTOR;
 
       this.io.emit("multiplier_update", {
-        multiplier: this.multiplier.toFixed(2)
+        multiplier: this.multiplier.toFixed(2),
       });
 
       if (this.multiplier >= this.crashPoint) {
         clearInterval(interval);
 
         this.io.emit("round_end", {
-          crashPoint: this.crashPoint.toFixed(2)
+          crashPoint: this.crashPoint.toFixed(2),
         });
-        console.log(`💥 Round Ended | Crash at: ${this.crashPoint.toFixed(2)}x`);
+        console.log(`💥 Game crashed at ${this.crashPoint.toFixed(2)}x`);
 
         await this.resolveBets();
+        this.bets = {}; // ✅ Reset bets only after round ends
         this.running = false;
-        this.bets = {}; // Reset bets after round completes
       }
     }, 100);
   }
@@ -91,7 +83,7 @@ class GameEngine {
       }
 
       if (!currency || !["BTC", "ETH"].includes(currency)) {
-        socket.emit("error", { message: "Unsupported cryptocurrency." });
+        socket.emit("error", { message: "Unsupported currency." });
         return;
       }
 
@@ -103,12 +95,11 @@ class GameEngine {
 
       const cryptoPrice = await fetchCryptoPrice(currency.toLowerCase());
       if (!cryptoPrice) {
-        socket.emit("error", { message: "Could not fetch crypto price." });
+        socket.emit("error", { message: "Failed to fetch crypto price." });
         return;
       }
 
       const cryptoAmount = usdAmount / cryptoPrice;
-
       if (!player.wallet[currency] || player.wallet[currency] < cryptoAmount) {
         socket.emit("error", { message: `Insufficient ${currency} balance.` });
         return;
@@ -125,20 +116,18 @@ class GameEngine {
         cashoutMultiplier: null,
       };
 
-      if (this.currentRound) {
-        this.currentRound.player_bets.push({
-          player_id: player._id,
-          usd_amount: usdAmount,
-          crypto_amount: cryptoAmount,
-          currency,
-          multiplier: 1,
-          cashed_out: false,
-        });
-        await this.currentRound.save();
-      }
+      this.currentRound.player_bets.push({
+        player_id: player._id,
+        usd_amount: usdAmount,
+        crypto_amount: cryptoAmount,
+        currency,
+        multiplier: 1,
+        cashed_out: false,
+      });
+      await this.currentRound.save();
 
       const transactionHash = `bet_${Date.now()}_${playerId}`;
-      const betTransaction = new Transaction({
+      const betTx = new Transaction({
         player_id: player._id,
         usd_amount: usdAmount,
         crypto_amount: cryptoAmount,
@@ -147,7 +136,7 @@ class GameEngine {
         transaction_hash: transactionHash,
         price_at_time: cryptoPrice,
       });
-      await betTransaction.save();
+      await betTx.save();
 
       socket.emit("bet_placed", {
         usdAmount,
@@ -171,7 +160,7 @@ class GameEngine {
         return;
       }
 
-      if (bet.cashoutMultiplier) {
+      if (bet.cashoutMultiplier !== null) {
         socket.emit("error", { message: "Already cashed out." });
         return;
       }
@@ -206,7 +195,7 @@ class GameEngine {
       }
 
       const transactionHash = `cashout_${Date.now()}_${playerId}`;
-      const cashoutTransaction = new Transaction({
+      const tx = new Transaction({
         player_id: player._id,
         usd_amount: payoutUSD,
         crypto_amount: payoutCrypto,
@@ -215,7 +204,7 @@ class GameEngine {
         transaction_hash: transactionHash,
         price_at_time: bet.entryPrice,
       });
-      await cashoutTransaction.save();
+      await tx.save();
 
       socket.emit("cashed_out", {
         payoutUSD: payoutUSD.toFixed(2),
@@ -259,16 +248,16 @@ class GameEngine {
 
         if (!won) {
           const transactionHash = `loss_${Date.now()}_${playerId}`;
-          const lossTransaction = new Transaction({
+          const tx = new Transaction({
             player_id: player._id,
             usd_amount: bet.usdAmount,
             crypto_amount: bet.cryptoAmount,
             currency: bet.currency,
-            transaction_type: "bet",
+            transaction_type: "loss",
             transaction_hash: transactionHash,
             price_at_time: bet.entryPrice,
           });
-          promises.push(lossTransaction.save());
+          promises.push(tx.save());
         }
       }
 
