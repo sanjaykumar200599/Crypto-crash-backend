@@ -3,19 +3,47 @@
 <head>
   <title>Crypto Crash WebSocket Test</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #111; color: #eee; }
-    .log { white-space: pre-wrap; background: #222; padding: 10px; height: 300px; overflow-y: scroll; }
-    input, button { margin-top: 10px; }
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #111;
+      color: #eee;
+    }
+    .log {
+      white-space: pre-wrap;
+      background: #222;
+      padding: 10px;
+      height: 300px;
+      overflow-y: scroll;
+      margin-top: 10px;
+      border-radius: 4px;
+    }
+    input, button {
+      margin-top: 10px;
+      padding: 6px;
+      font-size: 14px;
+      border-radius: 4px;
+    }
+    button {
+      margin-right: 5px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+    }
   </style>
 </head>
 <body>
   <h2>Crypto Crash WebSocket Client</h2>
+
   <div>
-    <label>Player ID: </label>
+    <label>Player ID:</label><br>
     <input type="text" id="playerId" placeholder="Enter player ID" />
-    <br>
-    <label>Bet Amount (USD): </label>
-    <input type="number" id="betAmount" />
+    <br><br>
+
+    <label>Bet Amount (USD):</label><br>
+    <input type="number" id="betAmount" placeholder="Amount in USD" />
+    <br><br>
+
     <button onclick="placeBet()">Place Bet</button>
     <button onclick="cashout()">Cash Out</button>
   </div>
@@ -23,50 +51,82 @@
   <h3>Game Log:</h3>
   <div class="log" id="log"></div>
 
-   <!-- Load socket.io client from CDN -->
+  <!-- Socket.IO Client -->
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script>
-    const log = msg => {
+    const log = (msg) => {
       const el = document.getElementById('log');
       el.innerText += `\n${msg}`;
       el.scrollTop = el.scrollHeight;
     };
 
-    const socket = io("https://crypto-crash-backend-m4w8.onrender.com/"); 
+    const socket = io("https://crypto-crash-backend-m4w8.onrender.com/");
 
     socket.on("connect", () => {
       log("✅ Connected to WebSocket");
     });
 
-    socket.on("game:start", data => {
+    socket.on("disconnect", () => {
+      log("🔌 Disconnected from server");
+    });
+
+    socket.on("round_start", (data) => {
       log(`🚀 Game started! Round ID: ${data.roundId}`);
     });
 
-    socket.on("game:multiplier", data => {
+    socket.on("multiplier_update", (data) => {
       log(`📈 Multiplier: ${data.multiplier}x`);
     });
 
-    socket.on("game:cashout", data => {
-      log(`💸 Player ${data.playerId} cashed out at ${data.multiplier}x, won ${data.usdAmount} USD`);
-    });
-
-    socket.on("game:end", data => {
+    socket.on("round_end", (data) => {
       log(`💥 Game crashed at ${data.crashPoint}x`);
     });
 
+    socket.on("player_cashed_out", (data) => {
+      log(`💸 Player ${data.playerId} cashed out at ${data.cashoutMultiplier}x and won ${data.payoutUSD} USD`);
+    });
+
+    socket.on("bet_placed", (data) => {
+      log(`🎯 Bet confirmed: ${data.usdAmount} USD (${data.cryptoAmount.toFixed(8)} ${data.currency})`);
+    });
+
+    socket.on("cashed_out", (data) => {
+      log(`✅ You cashed out at ${data.cashoutMultiplier}x and won ${data.payoutUSD} USD`);
+    });
+
+    socket.on("error", (err) => {
+      log(`❌ Error: ${err.message}`);
+    });
+
     function placeBet() {
-      const playerId = document.getElementById("playerId").value;
+      const playerId = document.getElementById("playerId").value.trim();
       const usd = parseFloat(document.getElementById("betAmount").value);
-      socket.emit("bet:place", { playerId, usd, currency: "BTC" });
-      log(`📝 Bet placed: ${usd} USD`);
+
+      if (!playerId || isNaN(usd) || usd <= 0) {
+        log("❗ Enter a valid player ID and USD amount");
+        return;
+      }
+
+      socket.emit("place_bet", {
+        playerId,
+        usdAmount: usd,
+        currency: "BTC"
+      });
+
+      log(`📤 Sent bet: ${usd} USD`);
     }
 
     function cashout() {
-      const playerId = document.getElementById("playerId").value;
-      socket.emit("cashout:request", { playerId });
-      log("⚠️ Cashout requested");
+      const playerId = document.getElementById("playerId").value.trim();
+
+      if (!playerId) {
+        log("❗ Enter a valid player ID");
+        return;
+      }
+
+      socket.emit("cash_out", { playerId });
+      log("📤 Sent cashout request");
     }
   </script>
-
 </body>
 </html>
