@@ -1,3 +1,4 @@
+//GameEngine.js 
 const GameRound = require("../models/GameRound");
 const Player = require("../models/Player");
 const Transaction = require("../models/Transaction");
@@ -8,7 +9,7 @@ const { ROUND_INTERVAL_MS, GROWTH_FACTOR, MAX_CRASH_MULTIPLIER } = require("../c
 class GameEngine {
   constructor(io) {
     this.io = io;
-    this.bets = {}; // Active bets per player
+    this.bets = {};
     this.crashPoint = 0;
     this.multiplier = 1;
     this.running = false;
@@ -16,15 +17,26 @@ class GameEngine {
   }
 
   async start() {
+    setInterval(() => this.checkAndStartGame(), ROUND_INTERVAL_MS);
+  }
+
+  async checkAndStartGame() {
+    if (this.running) return;
+
+    const hasBets = Object.keys(this.bets).length > 0;
+
+    if (!hasBets) {
+      console.log("⏸️ Skipping round — no active bets.");
+      return;
+    }
+
     await this.runGameLoop();
-    setInterval(() => this.runGameLoop(), ROUND_INTERVAL_MS);
   }
 
   async runGameLoop() {
     if (this.running) return;
 
     this.running = true;
-    this.bets = {};
     this.multiplier = 1;
 
     const { seed, hash } = generateSeedAndHash();
@@ -66,6 +78,7 @@ class GameEngine {
 
         await this.resolveBets();
         this.running = false;
+        this.bets = {}; // Reset bets after round completes
       }
     }, 100);
   }
@@ -112,15 +125,17 @@ class GameEngine {
         cashoutMultiplier: null,
       };
 
-      this.currentRound.player_bets.push({
-        player_id: player._id,
-        usd_amount: usdAmount,
-        crypto_amount: cryptoAmount,
-        currency,
-        multiplier: 1,
-        cashed_out: false,
-      });
-      await this.currentRound.save();
+      if (this.currentRound) {
+        this.currentRound.player_bets.push({
+          player_id: player._id,
+          usd_amount: usdAmount,
+          crypto_amount: cryptoAmount,
+          currency,
+          multiplier: 1,
+          cashed_out: false,
+        });
+        await this.currentRound.save();
+      }
 
       const transactionHash = `bet_${Date.now()}_${playerId}`;
       const betTransaction = new Transaction({
