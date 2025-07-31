@@ -1,3 +1,4 @@
+//ProvablyFair Service
 const crypto = require("crypto");
 
 // Generate a random seed string (hex)

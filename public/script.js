@@ -1,4 +1,4 @@
-// ✅ Replace with your actual Render backend URL
+//script.js
 const BACKEND_URL = "https://crypto-crash-backend-m4w8.onrender.com";
 
 // Socket.io connection to backend (for WebSocket)
@@ -23,7 +23,7 @@ function log(message) {
   logEl.prepend(p);
 }
 
-// 🔁 Fetch wallet
+//  Fetch wallet
 async function fetchWallet() {
   try {
     const res = await fetch(`${BACKEND_URL}/api/player/wallet`);
@@ -38,7 +38,7 @@ async function fetchWallet() {
 
 fetchWallet();
 
-// 🎯 Place bet
+//  Place bet
 betBtn.onclick = async () => {
   const usd = parseFloat(usdInput.value);
   const currency = currencySelect.value;
@@ -66,14 +66,14 @@ betBtn.onclick = async () => {
   }
 };
 
-// 💸 Cashout
+//  Cashout
 cashoutBtn.onclick = () => {
   socket.emit("cashout");
   log("💸 Cashout requested!");
   cashoutBtn.disabled = true;
 };
 
-// 🔁 Listen for events
+//  Listen for events
 socket.on("multiplier_update", (data) => {
   multiplierEl.textContent = data.multiplier.toFixed(2) + "x";
 });

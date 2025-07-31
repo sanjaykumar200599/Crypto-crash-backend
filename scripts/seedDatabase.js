@@ -1,3 +1,4 @@
+//seedDatabase.js
 require('dotenv').config();
 const connectDB = require('../config/database');
 const Player = require('../models/Player');
