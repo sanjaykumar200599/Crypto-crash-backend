@@ -7,7 +7,7 @@ Below api endpoint is created in postman.
 
 user_id: 688b57d79a5c82fc9b343799   
 name :king  
-IMP : Please use this ID instead random ID  for testing purpose, use this in front end deployed link.
+IMP : Please use the above user_ID instead random_ID  for testing purpose, use this in front end deployed link.
 
 
 ________________________________________________________________________________________________________________________________________________________________________________________________________
@@ -34,6 +34,17 @@ A real-time multiplayer backend for a **Crypto Crash** betting game built with *
 - **Crypto module** for provably fair logic
 
 ---
+
+Images:
+
+Bet placed:
+<img width="1883" height="867" alt="Image" src="https://github.com/user-attachments/assets/4f109fc6-2e06-47bb-812f-b88123581d12" />
+
+After Cashout:
+
+<img width="1308" height="814" alt="Image" src="https://github.com/user-attachments/assets/f43344bd-f32f-43a1-b823-36526fe248a2" />
+
+
 ## 🗂️ Project Structure
 
 crypto-crash-backend/
