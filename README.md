@@ -7,7 +7,7 @@ Below api endpoint is created in postman.
 
 user_id: 688b57d79a5c82fc9b343799   
 name :king  
-IMP : Please use the above user_ID instead random_ID  for testing purpose, use this in front end deployed link, also run backurl first then move to frontend url.
+IMP : Please use the above user_ID instead random_ID  for testing purpose, use this in front end deployed link, also run backend url first then move to frontend url.
 
 
 ________________________________________________________________________________________________________________________________________________________________________________________________________
